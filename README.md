@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 다바르 (DABAR) — 설교 준비 웹앱
 
-## Getting Started
+성경 본문을 입력하면 **연구 → 개요 → 설교문** 워크플로우를 따라 설교를 준비하는 한국어 웹앱입니다.
 
-First, run the development server:
+## 기능
+
+- **홈/대시보드**: 저장된 설교 목록(단계별 진행도 표시), 새 설교 시작 (본문 + 선택적 주제 입력)
+- **1단계 · 연구**: 본문 배경 · 원어 분석 · 본문 구조 · 신학적 주제 · 교차 참조 (붙여넣기 구조)
+- **2단계 · 개요**: 서론 / 본론(대지 추가·삭제) / 결론 편집 + **목사님 직접 수정 후 "개요 최종 컨펌"**
+- **3단계 · 어조 선택**: 3가지 어조 중 복수 선택 — 친절한 설명형(박동찬) / 강한 설득형(젠센 프랭클린) / 위로와 치유형
+- **4단계 · 설교문**: 선택한 어조별 탭으로 설교문 표시/편집 (개요 확정 + 어조 선택 후 활성화)
+- **어조 학습**: 목사님의 기존 설교 원고를 등록해 두는 섹션 (JSON 백업 내보내기 지원)
+- **자동 저장**: 모든 입력은 브라우저 로컬 스토리지에 자동 저장
+
+> 현재 버전에는 AI 자동 생성이 없습니다. 아벨(채팅)이 생성한 연구/개요/설교문 결과를 각 단계에 복사해서 붙여넣는 방식으로 사용합니다. 향후 API 연동을 위한 자리는 `app/lib/ai.ts`에 마련되어 있습니다.
+
+## 기술 스택
+
+- Next.js 15 (App Router) + TypeScript + Tailwind CSS v4
+- 완전 클라이언트 사이드 (서버/DB 없음, localStorage 저장)
+- 정적 익스포트 (`output: "export"`)
+
+## 개발
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # 프로덕션 빌드 → ./out
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 배포 (Cloudflare Pages)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- 빌드 명령: `npm run build`
+- 출력 디렉터리: `out`
+- 커스텀 도메인: `dabar.ahy.red` (Cloudflare Pages → Custom domains에서 연결)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+정적 파일만으로 동작하므로 별도 서버 설정이 필요 없습니다.

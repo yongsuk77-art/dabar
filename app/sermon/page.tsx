@@ -20,12 +20,13 @@ import {
   TopBar,
 } from "@/app/components/ui";
 import { ApiKeySettings } from "@/app/components/ai-settings";
+import { downloadSermonDocx, PageSizeOption } from "@/app/lib/export-docx";
 import {
   generateManuscripts,
   generateOutline,
   generateResearch,
 } from "@/app/lib/ai";
-import { AiKeyMissingError } from "@/app/lib/gemini";
+import { AiKeyMissingError, currentProviderLabel } from "@/app/lib/ai-client";
 
 type Step = "research" | "outline" | "tones" | "manuscript";
 
@@ -85,6 +86,8 @@ function SermonWorkspace() {
   >(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiErrorStep, setAiErrorStep] = useState<Step | null>(null);
+  const [pageSize, setPageSize] = useState<PageSizeOption>("A5");
+  const [exporting, setExporting] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstLoad = useRef(true);
 
@@ -234,11 +237,26 @@ function SermonWorkspace() {
     }));
   };
 
+  /* ---------- Word 저장 ---------- */
+
+  const exportWord = async () => {
+    setExporting(true);
+    try {
+      await downloadSermonDocx(sermon, pageSize);
+    } catch (e) {
+      alert(
+        e instanceof Error ? e.message : "Word 저장 중 오류가 발생했습니다."
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
   /* ---------- AI 자동 생성 ---------- */
 
   const friendlyAiError = (e: unknown): string => {
     if (e instanceof AiKeyMissingError) {
-      return "API 키가 설정되지 않았습니다. 왼쪽 사이드바의 'AI 자동 작성'에서 키를 입력해 주세요.";
+      return `API 키가 설정되지 않았습니다. 왼쪽 사이드바의 'AI 자동 작성'에서 ${currentProviderLabel()} 키를 입력해 주세요.`;
     }
     return e instanceof Error ? e.message : "생성 중 오류가 발생했습니다.";
   };
@@ -452,6 +470,34 @@ function SermonWorkspace() {
                   placeholder="설교 주제/방향 (선택)"
                 />
               </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-cream-200 pt-3">
+              <span className="text-xs font-bold text-ink-500">
+                📄 Word 저장
+              </span>
+              <div className="flex overflow-hidden rounded-lg border border-cream-200">
+                {(["A5", "A4"] as PageSizeOption[]).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setPageSize(s)}
+                    className={`px-3 py-1.5 text-xs font-bold transition ${
+                      pageSize === s
+                        ? "bg-pine-900 text-white"
+                        : "bg-white text-ink-900 hover:bg-cream-50"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="primary"
+                className="px-3 py-1.5 text-xs"
+                onClick={exportWord}
+                disabled={exporting}
+              >
+                {exporting ? "저장 중…" : "Word 저장"}
+              </Button>
             </div>
           </Card>
 

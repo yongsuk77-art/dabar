@@ -7,7 +7,7 @@
  * 결과는 각 단계의 입력란에 채워지며, 목사님이 직접 다듬으실 수 있습니다.
  */
 
-import { callGemini, parseJsonResponse } from "./gemini";
+import { callAi, parseJsonResponse } from "./ai-client";
 import type {
   Manuscripts,
   OutlineData,
@@ -20,7 +20,12 @@ const SYSTEM = `당신은 한국 교회를 섬기는 목회자의 설교 준비�
 - 모든 답변은 한국어로 작성합니다.
 - 성경 본문 인용은 핵심 구절만 짧게 인용하고 장·절을 함께 적습니다. (긴 본문 전체 인용 금지)
 - 목회자에게 실제 설교 준비에 도움이 되는 구체적이고 깊이 있는 내용을 제공합니다.
-- 추측성 단언을 피하고, 학자들의 견해가 갈리는 부분은 그렇게 밝힙니다.`;
+- 추측성 단언을 피하고, 학자들의 견해가 갈리는 부분은 그렇게 밝힙니다.
+
+[표시 규칙 — 반드시 지키세요. Word 문서 서식에 사용됩니다]
+- 성경을 직접 인용하는 문단은 문단 맨 앞에 [성경] 을 붙이세요. (예: [성경] 요한복음 3장 16절 하나님이 세상을...)
+- 예화나 적용을 담은 문장은 [예화] 와 [/예화] 로 감싸세요.
+- 가장 중요한 핵심 문장은 [핵심] 과 [/핵심] 으로 감싸세요. 남발하지 말고 진짜 핵심만 표시하세요.`;
 
 function researchPrompt(passage: string, title: string, theme: string): string {
   return `${SYSTEM}
@@ -106,9 +111,10 @@ ${styleSample ? `\n[목사님의 문체 참고 — 이 리듬과 표현 방식�
 요청 사항:
 - 위 개요의 흐름을 따라 서론·본론·결론 구조의 완성된 설교문으로 작성합니다.
 - 어조(${tone?.label})에 맞게 작성합니다.
-- 성경 구절은 핵심만 짧게 인용하고 장·절을 밝힙니다.
+- 성경 구절은 핵심만 짧게 인용하고 장·절을 밝힙니다. 인용 문단은 맨 앞에 [성경] 을 붙입니다.
+- 예화는 [예화] 와 [/예화] 로 감싸고, 핵심 문장은 [핵심] 과 [/핵심] 으로 감쌉니다. (핵심은 설교문 전체에서 8~12개 이내)
 - 분량은 30분 설교 기준(약 6,000자 내외)으로 작성합니다.
-- plain text로 작성합니다. (특수 표식 없이 자연스러운 설교문)`;
+- plain text로 작성합니다.`;
 }
 
 /** 본문 연구 자동 생성 */
@@ -117,7 +123,7 @@ export async function generateResearch(
   title: string,
   theme: string
 ): Promise<ResearchData> {
-  const text = await callGemini(researchPrompt(passage, title, theme), {
+  const text = await callAi(researchPrompt(passage, title, theme), {
     json: true,
   });
   const data = parseJsonResponse<ResearchData>(text);
@@ -137,7 +143,7 @@ export async function generateOutline(
   theme: string,
   research: ResearchData
 ): Promise<OutlineData> {
-  const text = await callGemini(
+  const text = await callAi(
     outlinePrompt(passage, title, theme, research),
     { json: true }
   );
@@ -171,7 +177,7 @@ export async function generateManuscripts(
 ): Promise<Partial<Manuscripts>> {
   const result: Partial<Manuscripts> = {};
   for (const toneKey of tones) {
-    const text = await callGemini(
+    const text = await callAi(
       manuscriptPrompt(passage, title, theme, outline, toneKey, styleSample)
     );
     result[toneKey] = text.trim();

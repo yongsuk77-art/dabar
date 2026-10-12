@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { loadSermon, saveSermon } from "@/app/lib/storage";
+import { loadSermon, loadStyleSamples, saveSermon } from "@/app/lib/storage";
 import {
   TONES,
   type OutlinePoint,
@@ -19,6 +19,13 @@ import {
   TextInput,
   TopBar,
 } from "@/app/components/ui";
+import { ApiKeySettings } from "@/app/components/ai-settings";
+import {
+  generateManuscripts,
+  generateOutline,
+  generateResearch,
+} from "@/app/lib/ai";
+import { AiKeyMissingError } from "@/app/lib/gemini";
 
 type Step = "research" | "outline" | "tones" | "manuscript";
 
@@ -73,6 +80,11 @@ function SermonWorkspace() {
   const [tone, setTone] = useState<ToneKey>("gentle");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState<
+    null | "research" | "outline" | "manuscript"
+  >(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiErrorStep, setAiErrorStep] = useState<Step | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstLoad = useRef(true);
 
@@ -222,6 +234,82 @@ function SermonWorkspace() {
     }));
   };
 
+  /* ---------- AI 자동 생성 ---------- */
+
+  const friendlyAiError = (e: unknown): string => {
+    if (e instanceof AiKeyMissingError) {
+      return "API 키가 설정되지 않았습니다. 왼쪽 사이드바의 'AI 자동 작성'에서 키를 입력해 주세요.";
+    }
+    return e instanceof Error ? e.message : "생성 중 오류가 발생했습니다.";
+  };
+
+  const runAiResearch = async () => {
+    setAiError(null);
+    setAiErrorStep(null);
+    setGenerating("research");
+    try {
+      const r = await generateResearch(
+        sermon.passage,
+        sermon.title,
+        sermon.theme
+      );
+      patch((s) => ({ ...s, research: r }));
+    } catch (e) {
+      setAiError(friendlyAiError(e));
+      setAiErrorStep("research");
+    } finally {
+      setGenerating(null);
+    }
+  };
+
+  const runAiOutline = async () => {
+    setAiError(null);
+    setAiErrorStep(null);
+    setGenerating("outline");
+    try {
+      const o = await generateOutline(
+        sermon.passage,
+        sermon.title,
+        sermon.theme,
+        sermon.research
+      );
+      patch((s) => ({ ...s, outline: o }));
+    } catch (e) {
+      setAiError(friendlyAiError(e));
+      setAiErrorStep("outline");
+    } finally {
+      setGenerating(null);
+    }
+  };
+
+  const runAiManuscripts = async () => {
+    if (sermon.selectedTones.length === 0) {
+      alert("먼저 어조를 선택해 주세요.");
+      return;
+    }
+    setAiError(null);
+    setAiErrorStep(null);
+    setGenerating("manuscript");
+    try {
+      const samples = loadStyleSamples();
+      const styleSample = samples[0]?.content.slice(0, 1500) ?? "";
+      const m = await generateManuscripts(
+        sermon.passage,
+        sermon.title,
+        sermon.theme,
+        sermon.outline,
+        sermon.selectedTones,
+        styleSample
+      );
+      patch((s) => ({ ...s, manuscripts: { ...s.manuscripts, ...m } }));
+    } catch (e) {
+      setAiError(friendlyAiError(e));
+      setAiErrorStep("manuscript");
+    } finally {
+      setGenerating(null);
+    }
+  };
+
   /* ---------- 어조 선택 헬퍼 ---------- */
 
   const toggleTone = (key: ToneKey) => {
@@ -299,6 +387,9 @@ function SermonWorkspace() {
                 </button>
               ))}
             </nav>
+            <div className="mt-3">
+              <ApiKeySettings compact />
+            </div>
             <div className="mt-3 border-t border-cream-200 px-1 pt-3">
               <Button
                 variant="ghost"
@@ -378,10 +469,28 @@ function SermonWorkspace() {
       {/* 1단계: 연구 */}
       {step === "research" && (
         <div className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-ink-500">
+              본문·제목·주제를 바탕으로 AI가 5개 항목을 자동 작성합니다.
+            </p>
+            <Button
+              variant="accent"
+              onClick={runAiResearch}
+              disabled={generating !== null}
+              className="shrink-0"
+            >
+              {generating === "research" ? "생성 중…" : "✨ AI로 연구 자동 생성"}
+            </Button>
+          </div>
+          {aiError && aiErrorStep === "research" && (
+            <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-700">
+              {aiError}
+            </p>
+          )}
           <Card className="border-cream-200 bg-cream-50 p-4">
             <p className="text-sm text-ink-900">
-              💡 아벨과의 채팅에서 받은 연구 결과를 복사해서 각 항목에
-              붙여넣으세요.
+              💡 AI 자동 생성으로 채우거나, 아벨과의 채팅에서 받은 연구 결과를
+              직접 붙여넣으세요. 작성된 내용은 자유롭게 수정할 수 있습니다.
             </p>
           </Card>
           {RESEARCH_SECTIONS.map((sec) => (
@@ -406,6 +515,24 @@ function SermonWorkspace() {
       {/* 2단계: 개요 (컨펌 플로우) */}
       {step === "outline" && (
         <div className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-ink-500">
+              연구 내용을 바탕으로 AI가 서론·대지·결론 개요를 자동 작성합니다.
+            </p>
+            <Button
+              variant="accent"
+              onClick={runAiOutline}
+              disabled={generating !== null}
+              className="shrink-0"
+            >
+              {generating === "outline" ? "생성 중…" : "✨ AI로 개요 자동 생성"}
+            </Button>
+          </div>
+          {aiError && aiErrorStep === "outline" && (
+            <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-700">
+              {aiError}
+            </p>
+          )}
           {sermon.outlineConfirmed ? (
             <Card className="border-pine-100 bg-pine-50 p-4">
               <div className="flex items-start justify-between gap-3">
@@ -632,8 +759,8 @@ function SermonWorkspace() {
             <>
               <Card className="border-cream-200 bg-cream-50 p-4">
                 <p className="text-sm text-ink-900">
-                  💡 아벨이 각 어조로 작성해 준 설교문을 해당 탭에 붙여넣고
-                  다듬으세요.{" "}
+                  💡 AI 자동 생성으로 채우거나, 아벨이 각 어조로 작성해 준
+                  설교문을 해당 탭에 붙여넣고 다듬으세요.{" "}
                   <button
                     onClick={() => setStep("tones")}
                     className="font-bold underline underline-offset-2"
@@ -642,6 +769,27 @@ function SermonWorkspace() {
                   </button>
                 </p>
               </Card>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-ink-500">
+                  선택한 어조별로 설교문을 자동 작성합니다. (순차 생성)
+                </p>
+                <Button
+                  variant="accent"
+                  onClick={runAiManuscripts}
+                  disabled={generating !== null}
+                  className="shrink-0"
+                >
+                  {generating === "manuscript"
+                    ? "생성 중…"
+                    : "✨ AI로 설교문 자동 생성"}
+                </Button>
+              </div>
+              {aiError && aiErrorStep === "manuscript" && (
+                <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                  {aiError}
+                </p>
+              )}
 
               <div className="flex gap-2">
                 {orderedSelectedTones.map((t) => (

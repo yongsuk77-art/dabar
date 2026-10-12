@@ -23,6 +23,7 @@ import {
   TextInput,
   TopBar,
 } from "@/app/components/ui";
+import { ApiKeySettings } from "@/app/components/ai-settings";
 
 /** 단계별 진행도 (연구/개요/어조/설교문) */
 function stepProgress(s: Sermon): boolean[] {
@@ -152,6 +153,11 @@ export default function Home() {
             차근차근 준비하세요. 작성 중인 내용은 이 기기에 자동 저장됩니다.
           </p>
         </header>
+
+        {/* AI 자동 작성 설정 */}
+        <div className="mb-8">
+          <ApiKeySettings />
+        </div>
 
         {/* 새 설교 시작 */}
         <Card className="mb-10 p-6 sm:p-8">

@@ -14,17 +14,25 @@ import {
   AutoTextarea,
   Button,
   Card,
+  CheckBadge,
   SectionTitle,
   TextInput,
+  TopBar,
 } from "@/app/components/ui";
 
 type Step = "research" | "outline" | "tones" | "manuscript";
 
-const STEPS: { key: Step; label: string }[] = [
-  { key: "research", label: "1 · 연구" },
-  { key: "outline", label: "2 · 개요" },
-  { key: "tones", label: "3 · 어조 선택" },
-  { key: "manuscript", label: "4 · 설교문" },
+const STEPS: {
+  key: Step;
+  label: string;
+  num: string;
+  desc: string;
+  icon: string;
+}[] = [
+  { key: "research", label: "연구", num: "01", desc: "본문 배경·원어·구조 파악", icon: "📖" },
+  { key: "outline", label: "개요", num: "02", desc: "서론·대지·결론 정리", icon: "📝" },
+  { key: "tones", label: "어조 선택", num: "03", desc: "3가지 어조 중 복수 선택", icon: "🎙️" },
+  { key: "manuscript", label: "설교문", num: "04", desc: "어조별 설교문 작성", icon: "✍️" },
 ];
 
 const RESEARCH_SECTIONS: {
@@ -124,10 +132,10 @@ function SermonWorkspace() {
     return (
       <main className="mx-auto max-w-2xl px-4 py-16 text-center">
         <p className="text-4xl">🔍</p>
-        <h1 className="mt-4 text-xl font-bold text-stone-900">
+        <h1 className="mt-4 text-xl font-bold text-ink-900">
           설교를 찾을 수 없습니다
         </h1>
-        <p className="mt-2 text-sm text-stone-500">
+        <p className="mt-2 text-sm text-ink-500">
           삭제되었거나 다른 브라우저에서 저장된 설교일 수 있습니다.
         </p>
         <div className="mt-6">
@@ -139,7 +147,7 @@ function SermonWorkspace() {
 
   if (!sermon) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-16 text-center text-stone-400">
+      <main className="mx-auto max-w-2xl px-4 py-16 text-center text-ink-400">
         불러오는 중…
       </main>
     );
@@ -245,81 +253,133 @@ function SermonWorkspace() {
     if (next) setStep(next.key);
   };
 
+  const activeStepInfo = STEPS[stepIndex];
+
   return (
-    <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
-      {/* 상단 바 */}
-      <div className="mb-4 flex items-center justify-between">
-        <Button variant="ghost" onClick={() => router.push("/")}>
-          ← 목록
-        </Button>
-        <p className="text-xs text-stone-400">
-          {saving
-            ? "저장 중…"
-            : savedAt
-              ? `✓ ${savedAt} 저장됨`
-              : "자동 저장 켜짐"}
-        </p>
-      </div>
+    <div className="min-h-screen">
+      <TopBar
+        onLogoClick={() => router.push("/")}
+        right={
+          <p className="text-xs text-pine-100/70">
+            {saving
+              ? "저장 중…"
+              : savedAt
+                ? `✓ ${savedAt} 저장됨`
+                : "자동 저장 켜짐"}
+          </p>
+        }
+      />
 
-      {/* 제목 / 본문 / 주제 */}
-      <Card className="mb-5 p-5">
-        <label className="mb-1.5 block text-xs font-semibold text-stone-500">
-          설교 제목
-        </label>
-        <input
-          value={sermon.title}
-          onChange={(e) => patch((s) => ({ ...s, title: e.target.value }))}
-          placeholder="설교 제목"
-          className="w-full bg-transparent text-2xl font-extrabold text-stone-900 placeholder:text-stone-300 focus:outline-none"
-        />
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="flex flex-1 items-center gap-2">
-            <span className="shrink-0 text-xs font-semibold text-stone-500">
-              본문
-            </span>
-            <TextInput
-              value={sermon.passage}
-              onChange={(v) => patch((s) => ({ ...s, passage: v }))}
-              placeholder="예: 갈라디아서 4:1-7"
-              className="font-semibold"
-            />
+      <div className="mx-auto flex max-w-6xl items-start gap-6 px-4 py-6 sm:px-6">
+        {/* 단계 사이드바 (데스크톱) */}
+        <aside className="hidden w-60 shrink-0 lg:block">
+          <div className="sticky top-6 rounded-2xl bg-cream-100 p-3">
+            <p className="kicker px-3 pt-1">설교 준비 단계</p>
+            <nav className="mt-2 space-y-1">
+              {STEPS.map((s, i) => (
+                <button
+                  key={s.key}
+                  onClick={() => setStep(s.key)}
+                  className={`flex w-full items-center gap-3 rounded-xl border-l-4 px-3 py-3 text-left transition-colors ${
+                    step === s.key
+                      ? "border-clay-600 bg-white shadow-sm"
+                      : "border-transparent hover:bg-white/60"
+                  }`}
+                >
+                  <span className="text-xl leading-none">{s.icon}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[11px] font-semibold text-ink-400">
+                      {s.num}
+                    </span>
+                    <span className="font-display block text-[15px] font-bold leading-snug text-ink-900">
+                      {s.label}
+                    </span>
+                  </span>
+                  <CheckBadge done={progress[i]} />
+                </button>
+              ))}
+            </nav>
+            <div className="mt-3 border-t border-cream-200 px-1 pt-3">
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => router.push("/")}
+              >
+                ← 설교 목록으로
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-1 items-center gap-2">
-            <span className="shrink-0 text-xs font-semibold text-stone-500">
-              주제
-            </span>
-            <TextInput
-              value={sermon.theme}
-              onChange={(v) => patch((s) => ({ ...s, theme: v }))}
-              placeholder="설교 주제/방향 (선택)"
-            />
-          </div>
-        </div>
-      </Card>
+        </aside>
 
-      {/* 단계 탭 */}
-      <div className="mb-5 flex gap-2">
-        {STEPS.map((s, i) => (
-          <button
-            key={s.key}
-            onClick={() => setStep(s.key)}
-            className={`flex-1 rounded-xl border px-2 py-2.5 text-sm font-bold transition-colors ${
-              step === s.key
-                ? "border-amber-700 bg-amber-700 text-white shadow-sm"
-                : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-            }`}
-          >
-            {progress[i] ? "● " : "○ "}
-            {s.label}
-          </button>
-        ))}
-      </div>
+        {/* 본문 */}
+        <main className="min-w-0 flex-1">
+          {/* 모바일 단계 칩 */}
+          <div className="mb-4 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            {STEPS.map((s, i) => (
+              <button
+                key={s.key}
+                onClick={() => setStep(s.key)}
+                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition-colors ${
+                  step === s.key
+                    ? "border-pine-900 bg-pine-900 text-white"
+                    : "border-cream-200 bg-white text-ink-500"
+                }`}
+              >
+                {progress[i] ? "✓" : s.num} {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 제목 / 본문 / 주제 */}
+          <Card className="mb-6 p-5 sm:p-6">
+            <p className="kicker mb-2">Sermon</p>
+            <input
+              value={sermon.title}
+              onChange={(e) => patch((s) => ({ ...s, title: e.target.value }))}
+              placeholder="설교 제목"
+              className="font-display w-full bg-transparent text-2xl font-black text-pine-950 placeholder:text-ink-400/40 focus:outline-none sm:text-3xl"
+            />
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex flex-1 items-center gap-2">
+                <span className="shrink-0 text-xs font-bold text-clay-600">
+                  본문
+                </span>
+                <TextInput
+                  value={sermon.passage}
+                  onChange={(v) => patch((s) => ({ ...s, passage: v }))}
+                  placeholder="예: 갈라디아서 4:1-7"
+                  className="font-semibold"
+                />
+              </div>
+              <div className="flex flex-1 items-center gap-2">
+                <span className="shrink-0 text-xs font-bold text-clay-600">
+                  주제
+                </span>
+                <TextInput
+                  value={sermon.theme}
+                  onChange={(v) => patch((s) => ({ ...s, theme: v }))}
+                  placeholder="설교 주제/방향 (선택)"
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* 단계 헤더 */}
+          <div className="mb-5 border-b border-cream-200 pb-4">
+            <p className="kicker">
+              {activeStepInfo.num} / 04 · 설교 준비
+            </p>
+            <h2 className="font-display mt-1.5 text-3xl font-black text-pine-950">
+              {activeStepInfo.label}
+            </h2>
+            <p className="mt-1 text-sm text-ink-500">{activeStepInfo.desc}</p>
+          </div>
 
       {/* 1단계: 연구 */}
       {step === "research" && (
         <div className="space-y-4">
-          <Card className="border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm text-amber-900">
+          <Card className="border-cream-200 bg-cream-50 p-4">
+            <p className="text-sm text-ink-900">
               💡 아벨과의 채팅에서 받은 연구 결과를 복사해서 각 항목에
               붙여넣으세요.
             </p>
@@ -347,13 +407,13 @@ function SermonWorkspace() {
       {step === "outline" && (
         <div className="space-y-4">
           {sermon.outlineConfirmed ? (
-            <Card className="border-green-200 bg-green-50 p-4">
+            <Card className="border-pine-100 bg-pine-50 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-bold text-green-900">
+                  <p className="font-bold text-pine-900">
                     ✓ 개요가 확정되었습니다
                   </p>
-                  <p className="mt-1 text-xs text-green-700">
+                  <p className="mt-1 text-xs text-pine-700">
                     {sermon.outlineConfirmedAt &&
                       `${formatDateTime(sermon.outlineConfirmedAt)} 확정 · `}
                     이제 어조 선택 단계로 넘어가세요.
@@ -365,8 +425,8 @@ function SermonWorkspace() {
               </div>
             </Card>
           ) : (
-            <Card className="border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm text-amber-900">
+            <Card className="border-cream-200 bg-cream-50 p-4">
+              <p className="text-sm text-ink-900">
                 💡 아벨이 채팅에서 제시한{" "}
                 <strong>샘플 개요를 복사해서 붙여넣고</strong>, 목사님이 직접
                 수정하세요. 다듬으신 뒤 아래{" "}
@@ -390,10 +450,10 @@ function SermonWorkspace() {
           <Card className="p-5">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-stone-900">
+                <h3 className="text-base font-bold text-ink-900">
                   본론 · 대지
                 </h3>
-                <p className="mt-1 text-xs text-stone-500">
+                <p className="mt-1 text-xs text-ink-500">
                   2~3개 대지로 논리를 전개하세요
                 </p>
               </div>
@@ -402,7 +462,7 @@ function SermonWorkspace() {
               </Button>
             </div>
             {sermon.outline.bodyPoints.length === 0 && (
-              <p className="rounded-lg bg-stone-50 px-4 py-6 text-center text-sm text-stone-400">
+              <p className="rounded-lg bg-cream-50 px-4 py-6 text-center text-sm text-ink-400">
                 아직 대지가 없습니다. &ldquo;대지 추가&rdquo;를 눌러 만드세요.
               </p>
             )}
@@ -410,10 +470,10 @@ function SermonWorkspace() {
               {sermon.outline.bodyPoints.map((p, i) => (
                 <div
                   key={p.id}
-                  className="rounded-lg border border-stone-200 bg-stone-50 p-4"
+                  className="rounded-lg border border-cream-200 bg-cream-50 p-4"
                 >
                   <div className="mb-2 flex items-center gap-2">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-700 text-xs font-bold text-white">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-600 text-xs font-bold text-white">
                       {i + 1}
                     </span>
                     <input
@@ -422,11 +482,11 @@ function SermonWorkspace() {
                         updatePoint(p.id, "title", e.target.value)
                       }
                       placeholder={`대지 ${i + 1} 제목`}
-                      className="w-full bg-transparent text-sm font-bold text-stone-900 placeholder:text-stone-400 focus:outline-none"
+                      className="w-full bg-transparent text-sm font-bold text-ink-900 placeholder:text-ink-400 focus:outline-none"
                     />
                     <button
                       onClick={() => removePoint(p.id)}
-                      className="shrink-0 rounded px-1.5 py-0.5 text-xs text-stone-400 hover:bg-red-50 hover:text-red-600"
+                      className="shrink-0 rounded px-1.5 py-0.5 text-xs text-ink-400 hover:bg-red-50 hover:text-red-600"
                       aria-label="대지 삭제"
                     >
                       삭제
@@ -471,16 +531,16 @@ function SermonWorkspace() {
       {/* 3단계: 어조 선택 */}
       {step === "tones" && (
         <div className="space-y-4">
-          <Card className="border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm text-amber-900">
+          <Card className="border-cream-200 bg-cream-50 p-4">
+            <p className="text-sm text-ink-900">
               💡 설교문을 작성할 어조를 선택하세요.{" "}
               <strong>복수 선택이 가능</strong>합니다. 선택한 어조별로 설교문
               탭이 만들어집니다.
             </p>
           </Card>
           {!sermon.outlineConfirmed && (
-            <Card className="border-stone-200 bg-stone-50 p-4">
-              <p className="text-sm text-stone-500">
+            <Card className="border-cream-200 bg-cream-50 p-4">
+              <p className="text-sm text-ink-500">
                 ℹ️ 개요가 아직 확정되지 않았습니다. 어조는 미리 선택할 수
                 있지만, 설교문 단계는 개요 확정 후에 열립니다.
               </p>
@@ -496,30 +556,30 @@ function SermonWorkspace() {
                   onClick={() => toggleTone(t.key)}
                   className={`rounded-xl border-2 p-5 text-left transition-all ${
                     selected
-                      ? "border-amber-700 bg-amber-50 shadow-sm"
-                      : "border-stone-200 bg-white hover:border-stone-300"
+                      ? "border-pine-700 bg-pine-50 shadow-sm"
+                      : "border-cream-200 bg-white hover:border-cream-200"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span
                       className={`flex h-6 w-6 items-center justify-center rounded-md border-2 text-sm font-bold ${
                         selected
-                          ? "border-amber-700 bg-amber-700 text-white"
-                          : "border-stone-300 text-transparent"
+                          ? "border-pine-800 bg-pine-800 text-white"
+                          : "border-cream-200 text-transparent"
                       }`}
                     >
                       ✓
                     </span>
                     {hasText && (
-                      <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">
+                      <span className="rounded-full bg-cream-100 px-2 py-0.5 text-[11px] text-ink-500">
                         작성됨
                       </span>
                     )}
                   </div>
-                  <h3 className="mt-3 text-base font-bold text-stone-900">
+                  <h3 className="mt-3 text-base font-bold text-ink-900">
                     {t.label}
                   </h3>
-                  <p className="mt-1 text-xs leading-relaxed text-stone-500">
+                  <p className="mt-1 text-xs leading-relaxed text-ink-500">
                     {t.description}
                   </p>
                 </button>
@@ -527,7 +587,7 @@ function SermonWorkspace() {
             })}
           </div>
           {sermon.selectedTones.length > 0 && (
-            <p className="text-center text-sm text-stone-500">
+            <p className="text-center text-sm text-ink-500">
               {sermon.selectedTones.length}개 어조 선택됨 — 다음 단계에서 각
               어조별 설교문을 작성합니다.
             </p>
@@ -541,10 +601,10 @@ function SermonWorkspace() {
           {!sermon.outlineConfirmed ? (
             <Card className="p-8 text-center">
               <p className="text-4xl">📝</p>
-              <h3 className="mt-3 text-base font-bold text-stone-900">
+              <h3 className="mt-3 text-base font-bold text-ink-900">
                 개요를 먼저 확정해 주세요
               </h3>
-              <p className="mt-1 text-sm text-stone-500">
+              <p className="mt-1 text-sm text-ink-500">
                 설교문은 확정된 개요를 바탕으로 작성합니다.
               </p>
               <div className="mt-4">
@@ -556,10 +616,10 @@ function SermonWorkspace() {
           ) : sermon.selectedTones.length === 0 ? (
             <Card className="p-8 text-center">
               <p className="text-4xl">🎙️</p>
-              <h3 className="mt-3 text-base font-bold text-stone-900">
+              <h3 className="mt-3 text-base font-bold text-ink-900">
                 어조를 먼저 선택해 주세요
               </h3>
-              <p className="mt-1 text-sm text-stone-500">
+              <p className="mt-1 text-sm text-ink-500">
                 3가지 어조 중 설교문을 작성할 어조를 고르세요. (복수 선택 가능)
               </p>
               <div className="mt-4">
@@ -570,8 +630,8 @@ function SermonWorkspace() {
             </Card>
           ) : (
             <>
-              <Card className="border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm text-amber-900">
+              <Card className="border-cream-200 bg-cream-50 p-4">
+                <p className="text-sm text-ink-900">
                   💡 아벨이 각 어조로 작성해 준 설교문을 해당 탭에 붙여넣고
                   다듬으세요.{" "}
                   <button
@@ -590,13 +650,13 @@ function SermonWorkspace() {
                     onClick={() => setTone(t.key)}
                     className={`flex-1 rounded-xl border px-3 py-2.5 text-left transition-colors ${
                       activeTone === t.key
-                        ? "border-amber-700 bg-amber-700 text-white shadow-sm"
-                        : "border-stone-200 bg-white hover:bg-stone-50"
+                        ? "border-pine-800 bg-pine-800 text-white shadow-sm"
+                        : "border-cream-200 bg-white hover:bg-cream-50"
                     }`}
                   >
                     <span
                       className={`block text-sm font-bold ${
-                        activeTone === t.key ? "text-white" : "text-stone-800"
+                        activeTone === t.key ? "text-white" : "text-ink-900"
                       }`}
                     >
                       {sermon.manuscripts[t.key].trim() ? "● " : "○ "}
@@ -605,8 +665,8 @@ function SermonWorkspace() {
                     <span
                       className={`mt-0.5 block text-[11px] leading-snug ${
                         activeTone === t.key
-                          ? "text-amber-100"
-                          : "text-stone-400"
+                          ? "text-pine-100"
+                          : "text-ink-400"
                       }`}
                     >
                       {t.description}
@@ -628,7 +688,7 @@ function SermonWorkspace() {
                         ?.label
                     }
                   </SectionTitle>
-                  <span className="shrink-0 text-xs text-stone-400">
+                  <span className="shrink-0 text-xs text-ink-400">
                     {manuscriptText.length.toLocaleString()}자
                   </span>
                 </div>
@@ -665,7 +725,9 @@ function SermonWorkspace() {
           )}
         </div>
       </div>
-    </main>
+        </main>
+      </div>
+    </div>
   );
 }
 
@@ -673,7 +735,7 @@ export default function SermonPage() {
   return (
     <Suspense
       fallback={
-        <main className="mx-auto max-w-2xl px-4 py-16 text-center text-stone-400">
+        <main className="mx-auto max-w-2xl px-4 py-16 text-center text-ink-400">
           불러오는 중…
         </main>
       }
